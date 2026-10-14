@@ -1,0 +1,14 @@
+plugins {
+    id 'java-library'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES
+    }
+}
+
+dependencies {
+    api 'com.apollographql.federation:federation-graphql-java-support:6.0.0'
+    compileOnly 'org.springframework.boot:spring-boot-starter-graphql'
+}

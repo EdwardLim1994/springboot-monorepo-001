@@ -1,0 +1,48 @@
+plugins {
+    id 'org.springframework.boot' version '4.1.1' apply false
+    id 'io.spring.dependency-management' version '1.1.7' apply false
+}
+
+allprojects { repositories { mavenCentral() } }
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'io.spring.dependency-management'
+
+    if (project.path != ':common:federation') apply plugin: 'org.springframework.boot'
+
+    group = 'dev.learning'
+    version = '0.0.1-SNAPSHOT'
+    java { toolchain { languageVersion = JavaLanguageVersion.of(25) } }
+    tasks.withType(Test).configureEach { useJUnitPlatform() }
+}
+
+tasks.register('startInfrastructure', Exec) {
+    group = 'application'
+    description = 'Starts Postgres, Kafka, and Apollo Router.'
+    environment 'PRODUCTS_URL', 'http://host.docker.internal:8081/graphql'
+    environment 'ORDERS_URL', 'http://host.docker.internal:8082/graphql'
+    commandLine 'docker', 'compose', 'up', '-d', '--force-recreate', 'products-db', 'orders-db', 'kafka', 'router'
+}
+
+tasks.register('deployRouter', Exec) {
+    group = 'application'
+    description = 'Recomposes the supergraph and restarts Apollo Router.'
+    environment 'PRODUCTS_URL', 'http://host.docker.internal:8081/graphql'
+    environment 'ORDERS_URL', 'http://host.docker.internal:8082/graphql'
+    commandLine 'docker', 'compose', 'up', '-d', '--force-recreate', 'router'
+}
+
+tasks.register('dev', Exec) {
+    group = 'application'
+    description = 'Starts infrastructure and both Spring Boot apps.'
+    dependsOn 'startInfrastructure'
+    commandLine 'gradle', '--parallel', ':services:products:bootRun', ':services:orders:bootRun'
+}
+
+tasks.register('migrateAll') {
+    group = 'database'
+    description = 'Runs Liquibase migrations for all services.'
+    dependsOn ':services:products:migrate', ':services:orders:migrate'
+}
+

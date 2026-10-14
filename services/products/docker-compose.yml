@@ -1,0 +1,40 @@
+services:
+  # products:
+  #   build:
+  #     context: ../..
+  #     dockerfile: services/products/Dockerfile
+  #   environment:
+  #     SPRING_DATASOURCE_URL: jdbc:postgresql://products-db:5432/products
+  #     SPRING_DATASOURCE_USERNAME: products
+  #     SPRING_DATASOURCE_PASSWORD: products
+  #   depends_on:
+  #     products-db:
+  #       condition: service_healthy
+  #   networks:
+  #     default:
+  #       aliases:
+  #         - products
+
+  products-db:
+    image: public.ecr.aws/docker/library/postgres:17-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: products
+      POSTGRES_USER: products
+      POSTGRES_PASSWORD: products
+    volumes:
+      - products-data-v2:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U products -d products" ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      default:
+        aliases:
+          - products-db
+
+volumes:
+  products-data-v2:
+

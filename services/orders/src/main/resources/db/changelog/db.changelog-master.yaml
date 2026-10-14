@@ -1,0 +1,31 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1-create-orders
+      author: learning
+      changes:
+        - createTable:
+            tableName: "order"
+            columns:
+              - column:
+                  name: id
+                  type: varchar(255)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: product_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: quantity
+                  type: int
+                  constraints:
+                    nullable: false
+  - changeSet:
+      id: 2-rename-order-table
+      author: learning
+      changes:
+        - renameTable:
+            oldTableName: "order"
+            newTableName: orders

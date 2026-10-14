@@ -1,0 +1,88 @@
+include:
+  - services/products/docker-compose.yml
+  - services/orders/docker-compose.yml
+
+services:
+  adminer:
+    image: adminer:latest
+    ports:
+      - "8088:8080"
+    networks:
+      default:
+        aliases:
+          - adminer
+
+  kafka:
+    image: apache/kafka:4.1.0
+    ports:
+      - "9092:9092"
+      - "9094:9094"
+    networks:
+      default:
+        aliases:
+          - kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,HOST://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,HOST://localhost:9094
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 1
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    depends_on:
+      - kafka
+    networks:
+      - default
+
+  router:
+    image: ghcr.io/apollographql/router:v2.8.0
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./router/router.yaml:/dist/config/router.yaml:ro
+      - ./router/supergraph.graphql:/dist/config/supergraph.graphql:ro
+    environment:
+      APOLLO_ROUTER_HOT_RELOAD: "true"
+    command: [ "--config", "/dist/config/router.yaml", "--supergraph", "/dist/config/supergraph.graphql" ]
+    networks:
+      default:
+        aliases:
+          - router
+    depends_on:
+      compose-supergraph:
+        condition: service_completed_successfully
+  compose-supergraph:
+    image: apollograph/rover:0.41.0
+    volumes:
+      - ./:/workspace
+    working_dir: /workspace
+    environment:
+      PRODUCTS_URL: ${PRODUCTS_URL:-http://host.docker.internal:8081/graphql}
+      ORDERS_URL: ${ORDERS_URL:-http://host.docker.internal:8082/graphql}
+      APOLLO_ELV2_LICENSE: accept
+    command: [ "supergraph", "compose", "--config", "/workspace/router/supergraph.yaml", "--output", "/workspace/router/supergraph.graphql" ]
+    networks:
+      - default
+    # depends_on:
+    #   products:
+    #     condition: service_healthy
+    #   orders:
+    #     condition: service_healthy
+
+networks:
+  default:
+    name: spring-federation

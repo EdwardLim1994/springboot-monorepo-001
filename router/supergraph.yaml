@@ -1,0 +1,10 @@
+federation_version: =2.11.0
+subgraphs:
+  products:
+    routing_url: ${env.PRODUCTS_URL:-http://products:8081/graphql}
+    schema:
+      file: ../services/products/src/main/resources/graphql/schema.graphqls
+  orders:
+    routing_url: ${env.ORDERS_URL:-http://orders:8082/graphql}
+    schema:
+      file: ../services/orders/src/main/resources/graphql/schema.graphqls
